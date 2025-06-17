@@ -1,0 +1,28 @@
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace PFE_Back.Migrations
+{
+    /// <inheritdoc />
+    public partial class AddLastLoginDateToApplicationUser : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.AddColumn<DateTime>(
+                name: "LastLoginDate",
+                table: "AspNetUsers",
+                type: "datetime2",
+                nullable: true);
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropColumn(
+                name: "LastLoginDate",
+                table: "AspNetUsers");
+        }
+    }
+}

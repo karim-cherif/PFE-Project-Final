@@ -1,0 +1,20 @@
+# Ignore uploads directory and its contents
+uploads/
+**/uploads/
+**/uploads/**
+PFE-Back/uploads/
+PFE-Back/PFE-Back/uploads/
+
+# Visual Studio files
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+
+# macOS files
+.DS_Store 

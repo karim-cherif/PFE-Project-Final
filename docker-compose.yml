@@ -1,0 +1,149 @@
+services:
+  # =============================================================================
+  # DATABASE SERVICE - SQL Server
+  # =============================================================================
+  database:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ${DATABASE_CONTAINER_NAME}
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${DB_PASSWORD}
+      - MSSQL_PID=Express
+    ports:
+      - "${DATABASE_PORT}:1433"
+    volumes:
+      - database_data:/var/opt/mssql
+    networks:
+      - ocrify-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${DB_PASSWORD} -Q 'SELECT 1' -C"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # =============================================================================
+  # BACKEND SERVICE - .NET 8 Web API
+  # =============================================================================
+  backend:
+    build:
+      context: ./PFE-Back
+      dockerfile: Dockerfile
+      args:
+        - DISABLE_CACHE=true
+    container_name: ${BACKEND_CONTAINER_NAME}
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
+      - JwtSettings__Key=${JWT_KEY}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__TokenLifetimeMinutes=${JWT_TOKEN_LIFETIME_MINUTES}
+      - JwtSettings__RefreshTokenLifetimeDays=${JWT_REFRESH_TOKEN_LIFETIME_DAYS}
+      - SendGrid__ApiKey=${SENDGRID_API_KEY}
+      - SendGrid__FromEmail=${SENDGRID_FROM_EMAIL}
+      - SendGrid__FromName=${SENDGRID_FROM_NAME}
+      - Google__ClientId=${GOOGLE_CLIENT_ID}
+      - Google__ClientSecret=${GOOGLE_CLIENT_SECRET}
+      - OcrService__Url=http://ocr-service:5002
+      - AppUrl=${APP_URL}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - Logging__LogLevel__Default=${LOG_LEVEL}
+      - Cache__DefaultExpirationMinutes=0
+      - Cache__MemoryCacheMinutes=0
+      - Cache__EnableDistributedCache=false
+      - UserManagement__AllowDeletedUserRestoration=false
+      - UserManagement__RestoreDeletedUsersViaGoogleAuth=false
+      - UserManagement__RestoreDeletedUsersViaRegularAuth=false
+    ports:
+      - "${BACKEND_PORT}:5000"
+    depends_on:
+      database:
+        condition: service_healthy
+      ocr-service:
+        condition: service_started
+    networks:
+      - ocrify-network
+    restart: unless-stopped
+    volumes:
+      - backend_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # =============================================================================
+  # OCR SERVICE - Python FastAPI
+  # =============================================================================
+  ocr-service:
+    build:
+      context: ./ocr-service
+      dockerfile: Dockerfile
+    container_name: ${OCR_SERVICE_CONTAINER_NAME}
+    environment:
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - OLLAMA_API_BASE=${OLLAMA_API_BASE}
+    ports:
+      - "${OCR_SERVICE_PORT}:5002"
+    networks:
+      - ocrify-network
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # =============================================================================
+  # FRONTEND SERVICE - Vue.js with Nginx
+  # =============================================================================
+  frontend:
+    build:
+      context: ./OCRify
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+        - VITE_OCR_SERVICE_URL=${VITE_OCR_SERVICE_URL}
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+        - DISABLE_CACHE=true
+    container_name: ${FRONTEND_CONTAINER_NAME}
+    ports:
+      - "${FRONTEND_PORT}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+      ocr-service:
+        condition: service_healthy
+    networks:
+      - ocrify-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  ocrify-network:
+    driver: bridge
+    name: ${DOCKER_NETWORK_NAME}
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  database_data:
+    driver: local
+  backend_uploads:
+    driver: local
