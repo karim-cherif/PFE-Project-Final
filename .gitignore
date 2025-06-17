@@ -1,0 +1,76 @@
+# Root level .gitignore for OCRify Platform
+
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Build outputs
+dist/
+build/
+out/
+
+# Dependencies (will be handled by individual .gitignores)
+node_modules/
+__pycache__/
+*.pyc
+bin/
+obj/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Backup files
+*.backup
+*_backup/
+*.bak
+
+# Sample/Test files (keep your sample files but ignore future ones)
+# Uncomment if you want to ignore sample files:
+# *.pdf
+# *.png
+# *.jpg
+# *.jpeg
